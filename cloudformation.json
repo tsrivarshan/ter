@@ -1,0 +1,220 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "myVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16",
+                "EnableDnsSupport": "true",
+                "EnableDnsHostnames": "true"
+            }
+        },
+        "Subnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "myVPC"
+                },
+                "CidrBlock": "10.0.1.0/24",
+                "AvailabilityZone": "us-east-1e",
+                "MapPublicIpOnLaunch":"true"
+
+            }
+        },
+        "Subnet2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "myVPC"
+                },
+                "CidrBlock": "10.0.2.0/24",
+                "AvailabilityZone": "us-east-1f",
+                  "MapPublicIpOnLaunch":"true"
+            }
+        },
+        "myInternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "myVPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "myInternetGateway"
+                }
+            }
+            },
+        "myRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "myVPC"
+                }
+            }
+        },
+        "myRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "myRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "myInternetGateway"
+                }
+            }
+        },
+        "Subnet1RouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "Subnet1"
+                },
+                "RouteTableId": {
+                    "Ref": "myRouteTable"
+                }
+            }
+        },
+        "Subnet2RouteTableAssociation2": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "Subnet2"
+                },
+                "RouteTableId": {
+                    "Ref": "myRouteTable"
+                }
+            }
+        },
+        "InstanceSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow http to client host",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 3000,
+                        "ToPort": 3000,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 443,
+                        "ToPort": 443,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "myVPC"
+                }
+            }
+        },
+        "NewKeyPair": {
+            "Type": "AWS::EC2::KeyPair",
+            "Properties": {
+                "KeyName": "MyKeyPair1"
+            }
+        },
+        "EC2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": "ami-090fa75af13c156b4",
+                "InstanceType": "t2.large",
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "InstanceSecurityGroup"
+                    }
+                ],
+                "SubnetId": {
+                    "Ref": "Subnet1"
+                },
+                "KeyName": {
+                    "Ref": "NewKeyPair"
+                }
+                
+            }
+        },
+        "myDBSubnetGroup": {
+            "Type": "AWS::RDS::DBSubnetGroup",
+            "Properties": {
+                "DBSubnetGroupDescription": "Subnet group for the RDS",
+                "SubnetIds": [
+                    {
+                        "Ref": "Subnet1"
+                    },
+                    {
+                        "Ref": "Subnet2"
+                    }
+                ]
+            }
+        },
+        "MyDB": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBInstanceIdentifier": "myDBidentifier",
+                "DBName": "myDB1",
+                "DBSubnetGroupName": {
+                    "Ref": "myDBSubnetGroup"
+                },
+                "DBInstanceClass": "db.t2.micro",
+                "AllocatedStorage": 10,
+                "Engine": "MySQL",
+                "EngineVersion": "8.0.16",
+                "MasterUsername": "admin",
+                "MasterUserPassword": "user12345"
+            }
+        }
+        // ,
+        // "MySNSTopic": {
+        //     "Type": "AWS::SNS::Topic",
+        //     "Properties": {
+        //         "Subscription": [
+        //             {
+        //                 "Endpoint": "srivarshant2002@gmail.com",
+        //                 "Protocol": "email"
+        //             }
+        //         ],
+        //         "TopicName": "SampleTopic"
+        //     }
+        // },
+    //     "SampleAlarm": {
+    //         "Type": "AWS::CloudWatch::Alarm",
+    //         "Properties": {
+    //             "Namespace": "AWS/EC2",
+    //             "MetricName": "CPUUtilization",
+    //             "Dimensions": [
+    //                 {
+    //                     "Name": "Basemachine",
+    //                     "Value": "i-0d9c04c821b0c7865"
+    //                 }
+    //             ],
+    //             "ComparisonOperator": "LessThanThreshold",
+    //             "EvaluationPeriods": 1,
+    //             "Period": 60,
+    //             "Statistic": "Average",
+    //             "Threshold": 25,
+    //             "AlarmDescription": "CPU Utilization of the EC2 instance with 25% as threshold",
+    //             "AlarmName": "Sample alarm",
+    //             "AlarmActions": [
+    //                 {
+    //                     "Ref": "MySNSTopic"
+    //                 }
+    //             ]
+    //         }
+    //    }
+    }
+}
